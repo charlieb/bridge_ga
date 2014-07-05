@@ -5,7 +5,7 @@ OBJECTS=$(SOURCES:.c=.o)
 DEST=.
 EXE=GA
 INCLUDES=`sdl2-config --cflags`
-LIBS= `sdl2-config --libs` -lm
+LIBS= `sdl2-config --libs` -lm -lSDL2_gfx
 
 .c.o:
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@

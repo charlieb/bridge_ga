@@ -1,18 +1,13 @@
+#include "mass.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
 
-#include "vec3.h"
 
 
-typedef struct mass {
-  float m; /* as in f=ma */
-  v3 pos;
-  v3 prev_pos;
-  v3 acc;
-  char fixed;
-} mass;
+/* MASS *************************/
 
 void mass_at(float m, float x, float y, float z, mass *mp) {
   memset(mp, 0, sizeof(mass));
@@ -20,27 +15,58 @@ void mass_at(float m, float x, float y, float z, mass *mp) {
   mp->pos.x = x;
   mp->pos.y = y;
   mp->pos.z = z;
+  mp->prev_pos.x = x;
+  mp->prev_pos.y = y;
+  mp->prev_pos.z = z;
+  mp->fixed = 0;
 }
 
 void print_mass(mass *m) {
   printf("Mass:\n"
+         "\tmass = %f\n"
          "\tpos = %f, %f, %f\n"
          "\tprev_pos = %f, %f, %f\n"
          "\tacc = %f, %f, %f\n"
          "\tfixed = %i\n",
+         m->m,
          m->pos.x, m->pos.y, m->pos.z,
          m->prev_pos.x, m->prev_pos.y, m->prev_pos.z,
          m->acc.x, m->acc.y, m->acc.z,
          m->fixed);
 }
 
-typedef enum { DIST_EQ, DIST_GT, DIST_LT, XGT, YGT, ZGT, XLT, YLT, ZLT, XEQ, YEQ, ZEQ } constraint_type;
-typedef struct constraint {
-  constraint_type type;
-  mass **masses;
-  int nmasses;
-  float val;
-} constraint;
+void draw_mass(SDL_Renderer *ren, mass *m) {
+  /* 0xAABBGGRR */
+  circleColor(ren, m->pos.x, m->pos.y, 2, 0xFFFFFFFF);
+}
+
+void step_mass(mass *m, float dt) {
+  if(m->fixed) return;
+
+  v3 pos;
+  float f = 0.25; /* damping */
+  memcpy(&pos, &m->pos, sizeof(v3));
+
+  /* pn+1 = pn * (2-f) + pn-1 * (1-f) + acc^2 */
+  v3mul(&m->pos, 2 - f, &m->pos);
+  v3mul(&m->prev_pos, 1 - f, &m->prev_pos);
+  v3sub(&m->pos, &m->prev_pos, &m->pos);
+
+  v3mul(&m->acc, dt*dt, &m->acc);
+  v3add(&m->pos, &m->acc, &m->pos);
+  
+  memcpy(&m->prev_pos, &pos, sizeof(v3));
+  memset(&m->acc, 0, sizeof(v3));
+}
+
+void gravity(mass *m) { 
+  v3 g;
+  g.x = g.z = 0;
+  g.y = 0.98;
+  v3add(&m->acc, &g, &m->acc);
+}
+
+/* CONSTRAINT ******************/
 
 void print_constraint(constraint *c) {
   printf("Constraint:\n"
@@ -55,38 +81,48 @@ void print_constraint(constraint *c) {
     print_mass(c->masses[i]);
 }
     
-typedef struct model {
-  mass *masses;
-  int nmasses;
-
-  constraint *constraints;
-  int nconstraints;
-} model;
-
-void print_model(model *m) {
-  printf("Model:\n"
-         "\tnmasses = %i\n"
-         "\tnconstraints = %i\n"
-         "\tconstraints = \n",
-         m->nmasses,
-         m->nconstraints);
-  for(int i = 0; i < m->nconstraints; i++)
-    print_constraint(&m->constraints[i]);
+void draw_constraint(SDL_Renderer *ren, constraint *c) {
+  switch(c->type) {
+    case DIST_EQ:
+      aalineColor(ren, c->masses[0]->pos.x, c->masses[0]->pos.y,
+                       c->masses[1]->pos.x, c->masses[1]->pos.y,
+                  0xFFFFFFFF);
+      break;
+    case DIST_GT:
+    case DIST_LT:
+    case XGT:
+    case YGT:
+    case ZGT:
+    case XLT:
+    case YLT:
+    case ZLT:
+    case XEQ:
+    case YEQ:
+    case ZEQ:
+    default:
+      printf("Tried to draw constraint with unsupported type\n");
+      break;
+  }
 }
 
-
 void dist_eq(constraint *c) {
-  v3 delta, *p1 = &c->masses[0]->pos, *p2 = &c->masses[1]->pos;
+  v3 delta;
+  mass *m1 = c->masses[0], *m2 = c->masses[1];
   float d;
 
-  v3sub(p2, p1, &delta);
+  v3sub(&m2->pos, &m1->pos, &delta);
   d = c->val - v3mag(&delta);
   
   v3norm(&delta, &delta);
-  v3mul(&delta, d/2, &delta);
+  if(m1->fixed || m2->fixed)
+    v3mul(&delta, d, &delta);
+  else
+    v3mul(&delta, d/2, &delta);
 
-  v3sub(p1, &delta, p1);
-  v3add(p2, &delta, p2);
+  if(!m1->fixed)
+    v3sub(&m1->pos, &delta, &m1->pos);
+  if(!m2->fixed)
+    v3add(&m2->pos, &delta, &m2->pos);
 }
 
 void run_constraint(constraint *c) {
@@ -109,6 +145,47 @@ void run_constraint(constraint *c) {
       printf("Tried to run constraint with unsupported type\n");
       break;
   }
+}
+
+/* MODEL ************/
+
+void print_model(model *m) {
+  printf("Model:\n"
+         "\tnmasses = %i\n"
+         "\tnconstraints = %i\n"
+         "\tconstraints = \n",
+         m->nmasses,
+         m->nconstraints);
+  for(int i = 0; i < m->nconstraints; i++)
+    print_constraint(&m->constraints[i]);
+}
+
+void draw_model(SDL_Renderer *ren, model *m) {
+  for(int i = 0; i < m->nconstraints; i++)
+    draw_constraint(ren, &m->constraints[i]);
+
+  for(int i = 0; i < m->nmasses; i++)
+    draw_mass(ren, &m->masses[i]);
+}
+
+void translate_model(model *m, v3 *t) {
+  for(int i = 0; i < m->nmasses; i++) {
+    v3add(&m->masses[i].pos, t, &m->masses[i].pos);
+    v3add(&m->masses[i].prev_pos, t, &m->masses[i].prev_pos);
+  }
+}
+
+void step_model(model *m, float dt) {
+  const int nrelaxes = 20;
+
+  for(int i = 0; i < m->nmasses; i++) {
+    gravity(&m->masses[i]);
+    step_mass(&m->masses[i], dt);
+  }
+
+  for(int i = 0; i < nrelaxes; i++)
+    for(int j = 0; j < m->nconstraints; j++)
+      run_constraint(&m->constraints[j]);
 }
 
 void link_masses_dist_eq(float dist, mass *m1, mass *m2, constraint *c) {
@@ -154,6 +231,8 @@ void make_grid(int x, int y, float spacing, model *model) {
       }
     }
 }
+
+/* TEST **********************/
 
 void masstest() {
   mass m1, m2;

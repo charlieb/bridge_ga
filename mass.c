@@ -230,6 +230,7 @@ void make_grid(int x, int y, float spacing, model *model) {
         link_masses_dist_eq(spacing,           m, &model->masses[i    +(j+1)*x], c);
       }
     }
+  //model->nconstraints = ccount;
 }
 
 /* TEST **********************/

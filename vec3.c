@@ -54,7 +54,7 @@ void v3norm(const v3 *v, v3 *out) {
     v3div(v, mag, out);
 }
 
-float dist(const v3 *v1, const v3 *v2) {
+float v3dist(const v3 *v1, const v3 *v2) {
   v3 d;
   v3sub(v1, v2, &d);
   return v3mag(&d);

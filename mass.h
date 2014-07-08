@@ -1,10 +1,12 @@
 #ifndef MASS
 #define MASS
 
-#include <SDL.h> 
-#include <SDL2_gfxPrimitives.h>
-
 #include "vec3.h"
+
+typedef char bool;
+#define TRUE 1
+#define FALSE 0
+
 
 /* MASS *************************/
 
@@ -17,7 +19,6 @@ typedef struct mass {
 } mass;
 
 void print_mass(mass *m);
-void draw_mass(SDL_Renderer *ren, mass *m);
 void step_mass(mass *m, float dt);
 void gravity(mass *m);
 
@@ -45,7 +46,6 @@ typedef struct model {
 } model;
 
 void print_model(model *m);
-void draw_model(SDL_Renderer *ren, model *m);
 void translate_model(model *m, v3 *t);
 void step_model(model *m, float dt);
 void link_masses_dist_eq(float dist, mass *m1, mass *m2, constraint *c);

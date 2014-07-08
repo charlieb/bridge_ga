@@ -19,5 +19,15 @@ debug: exe
 release: CFLAGS += -O2
 release: exe
 
+release_NOX: CFLAGS += -02 -DNOX
+release_NOX: LIBS = -lm
+release_NOX: INCLUDES =
+release_NOX: exe
+
+debug_NOX: CFLAGS += -g -DNOX
+debug_NOX: LIBS = -lm
+debug_NOX: INCLUDES =
+debug_NOX: exe
+
 clean:
 	@ - rm $(DEST)/$(EXE) $(OBJECTS)

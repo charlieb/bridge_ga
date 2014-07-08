@@ -35,11 +35,6 @@ void print_mass(mass *m) {
          m->fixed);
 }
 
-void draw_mass(SDL_Renderer *ren, mass *m) {
-  /* 0xAABBGGRR */
-  circleColor(ren, m->pos.x, m->pos.y, 2, 0xFFFFFFFF);
-}
-
 void step_mass(mass *m, float dt) {
   if(m->fixed) return;
 
@@ -81,30 +76,6 @@ void print_constraint(constraint *c) {
     print_mass(c->masses[i]);
 }
     
-void draw_constraint(SDL_Renderer *ren, constraint *c) {
-  switch(c->type) {
-    case DIST_EQ:
-      aalineColor(ren, c->masses[0]->pos.x, c->masses[0]->pos.y,
-                       c->masses[1]->pos.x, c->masses[1]->pos.y,
-                  0xFFFFFFFF);
-      break;
-    case DIST_GT:
-    case DIST_LT:
-    case XGT:
-    case YGT:
-    case ZGT:
-    case XLT:
-    case YLT:
-    case ZLT:
-    case XEQ:
-    case YEQ:
-    case ZEQ:
-    default:
-      printf("Tried to draw constraint with unsupported type\n");
-      break;
-  }
-}
-
 void dist_eq(constraint *c) {
   v3 delta;
   mass *m1 = c->masses[0], *m2 = c->masses[1];
@@ -158,14 +129,6 @@ void print_model(model *m) {
          m->nconstraints);
   for(int i = 0; i < m->nconstraints; i++)
     print_constraint(&m->constraints[i]);
-}
-
-void draw_model(SDL_Renderer *ren, model *m) {
-  for(int i = 0; i < m->nconstraints; i++)
-    draw_constraint(ren, &m->constraints[i]);
-
-  for(int i = 0; i < m->nmasses; i++)
-    draw_mass(ren, &m->masses[i]);
 }
 
 void translate_model(model *m, v3 *t) {

@@ -19,7 +19,7 @@ debug: exe
 release: CFLAGS += -O2
 release: exe
 
-release_NOX: CFLAGS += -02 -DNOX
+release_NOX: CFLAGS += -O2 -DNOX
 release_NOX: LIBS = -lm
 release_NOX: INCLUDES =
 release_NOX: exe

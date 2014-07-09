@@ -2,14 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mass.h"
-
-#define NUM_MASSES 50
-#define NUM_CONSTRAINTS 250
-typedef struct gene {
-  float masses[NUM_MASSES*4];
-  int constraints[NUM_CONSTRAINTS*2];
-} gene;
+#include "gene.h"
 
 void mass_to_gene(mass *m, float *gene) {
   gene[0] = m->m;
@@ -84,6 +77,30 @@ void init_pool(gene *genes, int ngenes, float xrange, float yrange, float massra
     init_gene(&genes[i], xrange, yrange, massrange);
 }
 
+void init_model_for_gene(model *m) {
+  m->nmasses = NUM_MASSES;
+  m->masses = malloc(m->nmasses * sizeof(mass));
+
+  m->nconstraints = NUM_CONSTRAINTS;
+  m->constraints = malloc(m->nconstraints * sizeof(constraint));
+}
+
 void genetest() {
+  gene g1, g2;
+
+  init_gene(&g1, 100, 100, 100);
+  memcpy(&g2, &g1, sizeof(gene));
+
+  model m;
+  memset(&m, 0, sizeof(model));
+  init_model_for_gene(&m);
+
+  gene_to_model(&g1, &m);
+  memset(&g1, 0, sizeof(gene));
+  model_to_gene(&m, &g1);
+  if(memcmp(&g1, &g2, sizeof(gene)))
+    printf("FAIL gene_to_model\n");
+  else
+    printf("PASS gene_to_model\n");
 
 }

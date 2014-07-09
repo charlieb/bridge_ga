@@ -1,17 +1,12 @@
 #include <stdio.h> 
 #include <string.h> 
 
-
+#include "draw.h"
 #include "mass.h"
 #include "vec3.h"
 
 
 int main() {
-  /*
-  v3test();
-  masstest();
-  */
-
 
   model m;
   memset(&m, 0, sizeof(model));
@@ -23,6 +18,7 @@ int main() {
   m.masses[0].fixed = TRUE;
   m.masses[19].fixed = TRUE;
 
+  start_draw(&m);
 
   return 0;
 }

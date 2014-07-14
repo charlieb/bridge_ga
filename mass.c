@@ -36,20 +36,20 @@ void print_mass(mass *m) {
 }
 
 void step_mass(mass *m, float dt) {
-  if(m->fixed) return;
-
   v3 pos;
   float f = 0.25; /* damping */
   memcpy(&pos, &m->pos, sizeof(v3));
 
-  /* pn+1 = pn * (2-f) + pn-1 * (1-f) + acc^2 */
-  v3mul(&m->pos, 2 - f, &m->pos);
-  v3mul(&m->prev_pos, 1 - f, &m->prev_pos);
-  v3sub(&m->pos, &m->prev_pos, &m->pos);
+  if(!m->fixed) {
+    /* pn+1 = pn * (2-f) + pn-1 * (1-f) + acc^2 */
+    v3mul(&m->pos, 2 - f, &m->pos);
+    v3mul(&m->prev_pos, 1 - f, &m->prev_pos);
+    v3sub(&m->pos, &m->prev_pos, &m->pos);
 
-  v3mul(&m->acc, dt*dt, &m->acc);
-  v3add(&m->pos, &m->acc, &m->pos);
-  
+    v3mul(&m->acc, dt*dt, &m->acc);
+    v3add(&m->pos, &m->acc, &m->pos);
+  }
+    
   memcpy(&m->prev_pos, &pos, sizeof(v3));
   memset(&m->acc, 0, sizeof(v3));
 }
@@ -78,6 +78,7 @@ void print_constraint(constraint *c) {
     
 void dist_eq(constraint *c) {
   v3 delta;
+  if(c->nmasses != 2) return; 
   mass *m1 = c->masses[0], *m2 = c->masses[1];
   float d;
 
@@ -196,6 +197,61 @@ void make_grid(int x, int y, float spacing, model *model) {
   //model->nconstraints = ccount;
 }
 
+/* MODEL PROCESSING *************/
+
+void walk_network(model *m) {
+  for(int i = 0; i < m->nmasses; i++)
+    m->masses[i].fixed = true;
+
+  //int max_path = 0;
+
+  mass *path[200];
+  int path_end = -1;
+  mass* found = 0;
+
+  path[++path_end] = &m->masses[0];
+  path[++path_end] = &m->masses[1];
+  m->masses[0].fixed = false;
+  m->masses[1].fixed = false;
+
+  while(path_end >= 0) {
+    for(int c = 0; c < m->nconstraints; c++) {
+      constraint *cons = &m->constraints[c];
+      if(cons->nmasses != 2) break;
+
+      if(cons->masses[0] == path[path_end]) {
+        if(cons->masses[1]->fixed) {
+          found = cons->masses[1];
+          break;
+        }
+      }
+      if(cons->masses[1] == path[path_end]) {
+        if(cons->masses[0]->fixed) {
+          found = cons->masses[0];
+          break;
+        }
+      }
+    }
+    if(found) {
+      path[++path_end] = found;
+      found->fixed = false;
+      found = 0;
+      //if(max_path < path_end) max_path = path_end;
+    }
+    else 
+      path_end--;
+  }
+  //printf("Max path: %i\n", max_path);
+}
+
+void fix_unconstrained(model *m) {
+  walk_network(m);
+  for(int i = 0; i < m->nmasses; i++)
+    if(m->masses[i].fixed)
+      m->masses[i].pos.y = m->masses[i].prev_pos.y = 0;
+}
+
+
 /* TEST **********************/
 
 void masstest() {
@@ -237,4 +293,10 @@ void masstest() {
     else
       printf("FAIL grid check: dist = %f, expected %f\n", v3mag(&diff), m.constraints[i].val);
   }
+
+  model mo;
+  memset(&m, 0, sizeof(model));
+  make_grid(2,3,1, &mo);
+  walk_network(&mo);
+
 }

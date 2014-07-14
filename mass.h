@@ -2,11 +2,7 @@
 #define MASS
 
 #include "vec3.h"
-
-typedef char bool;
-#define TRUE 1
-#define FALSE 0
-
+#include <stdbool.h>
 
 /* MASS *************************/
 
@@ -15,7 +11,7 @@ typedef struct mass {
   v3 pos;
   v3 prev_pos;
   v3 acc;
-  char fixed;
+  bool fixed;
 } mass;
 
 void print_mass(mass *m);
@@ -50,6 +46,7 @@ void translate_model(model *m, v3 *t);
 void step_model(model *m, float dt);
 void link_masses_dist_eq(float dist, mass *m1, mass *m2, constraint *c);
 void make_grid(int x, int y, float spacing, model *model);
+void fix_unconstrained(model *m);
 void masstest();
 
 #endif

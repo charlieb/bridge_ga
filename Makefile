@@ -29,5 +29,10 @@ debug_NOX: LIBS = -lm
 debug_NOX: INCLUDES =
 debug_NOX: exe
 
+profile_NOX: CFLAGS += -pg -DNOX
+profile_NOX: LIBS = -lm
+profile_NOX: INCLUDES =
+profile_NOX: exe
+
 clean:
 	@ - rm $(DEST)/$(EXE) $(OBJECTS)

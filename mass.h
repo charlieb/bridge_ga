@@ -12,6 +12,7 @@ typedef struct mass {
   v3 prev_pos;
   v3 acc;
   bool fixed;
+  bool dead;
 } mass;
 
 void print_mass(mass *m);
@@ -20,7 +21,7 @@ void gravity(mass *m);
 
 /* CONSTRAINT ******************/
 
-typedef enum { DIST_EQ, DIST_GT, DIST_LT, XGT, YGT, ZGT, XLT, YLT, ZLT, XEQ, YEQ, ZEQ } constraint_type;
+typedef enum { NONE, DIST_EQ, DIST_GT, DIST_LT, XGT, YGT, ZGT, XLT, YLT, ZLT, XEQ, YEQ, ZEQ } constraint_type;
 typedef struct constraint {
   constraint_type type;
   mass **masses;
@@ -46,7 +47,7 @@ void translate_model(model *m, v3 *t);
 void step_model(model *m, float dt);
 void link_masses_dist_eq(float dist, mass *m1, mass *m2, constraint *c);
 void make_grid(int x, int y, float spacing, model *model);
-void fix_unconstrained(model *m);
+void kill_unconstrained(model *m);
 void masstest();
 
 #endif

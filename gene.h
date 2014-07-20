@@ -13,6 +13,7 @@ void constraint_to_gene(constraint *c, mass *m, int *gene);
 void gene_to_constraint(int *gene, constraint *c, mass *m);
 void model_to_gene(model *m, gene *g);
 void gene_to_model(gene *g, model *m);
+void run_until_settled(model *m);
 void crossover(gene *g1, gene *g2, gene *res);
 void init_gene(gene *g);
 void init_pool(gene **genes, int ngenes);

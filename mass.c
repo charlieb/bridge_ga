@@ -27,12 +27,14 @@ void print_mass(mass *m) {
          "\tpos = %f, %f, %f\n"
          "\tprev_pos = %f, %f, %f\n"
          "\tacc = %f, %f, %f\n"
-         "\tfixed = %i\n",
+         "\tfixed = %i\n"
+         "\tdead = %i\n",
          m->m,
          m->pos.x, m->pos.y, m->pos.z,
          m->prev_pos.x, m->prev_pos.y, m->prev_pos.z,
          m->acc.x, m->acc.y, m->acc.z,
-         m->fixed);
+         m->fixed,
+         m->dead);
 }
 
 void step_mass(mass *m, float dt) {
@@ -40,7 +42,7 @@ void step_mass(mass *m, float dt) {
   float f = 0.25; /* damping */
   memcpy(&pos, &m->pos, sizeof(v3));
 
-  if(!m->fixed) {
+  if(!m->fixed && !m->dead) {
     /* pn+1 = pn * (2-f) + pn-1 * (1-f) + acc^2 */
     v3mul(&m->pos, 2 - f, &m->pos);
     v3mul(&m->prev_pos, 1 - f, &m->prev_pos);
@@ -79,6 +81,8 @@ void print_constraint(constraint *c) {
 void dist_eq(constraint *c) {
   v3 delta;
   if(c->nmasses != 2) return; 
+  if(c->masses[0]->dead || c->masses[1]->dead) return;
+
   mass *m1 = c->masses[0], *m2 = c->masses[1];
   float d;
 
@@ -99,6 +103,8 @@ void dist_eq(constraint *c) {
 
 void run_constraint(constraint *c) {
   switch(c->type) {
+    case NONE:
+      break;
     case DIST_EQ:
       dist_eq(c);
       break;
@@ -114,7 +120,7 @@ void run_constraint(constraint *c) {
     case YEQ:
     case ZEQ:
     default:
-      printf("Tried to run constraint with unsupported type\n");
+      //printf("Tried to run constraint with unsupported type\n");
       break;
   }
 }
@@ -199,9 +205,9 @@ void make_grid(int x, int y, float spacing, model *model) {
 
 /* MODEL PROCESSING *************/
 
-void walk_network(model *m) {
+void kill_unconstrained(model *m) {
   for(int i = 0; i < m->nmasses; i++)
-    m->masses[i].fixed = true;
+    m->masses[i].dead = true;
 
   //int max_path = 0;
 
@@ -211,22 +217,22 @@ void walk_network(model *m) {
 
   path[++path_end] = &m->masses[0];
   path[++path_end] = &m->masses[1];
-  m->masses[0].fixed = false;
-  m->masses[1].fixed = false;
+  m->masses[0].dead = false;
+  m->masses[1].dead = false;
 
   while(path_end >= 0) {
     for(int c = 0; c < m->nconstraints; c++) {
       constraint *cons = &m->constraints[c];
-      if(cons->nmasses != 2) break;
+      if(cons->nmasses != 2 || cons->type != DIST_EQ) break;
 
       if(cons->masses[0] == path[path_end]) {
-        if(cons->masses[1]->fixed) {
+        if(cons->masses[1]->dead) {
           found = cons->masses[1];
           break;
         }
       }
       if(cons->masses[1] == path[path_end]) {
-        if(cons->masses[0]->fixed) {
+        if(cons->masses[0]->dead) {
           found = cons->masses[0];
           break;
         }
@@ -234,7 +240,7 @@ void walk_network(model *m) {
     }
     if(found) {
       path[++path_end] = found;
-      found->fixed = false;
+      found->dead = false;
       found = 0;
       //if(max_path < path_end) max_path = path_end;
     }
@@ -243,14 +249,6 @@ void walk_network(model *m) {
   }
   //printf("Max path: %i\n", max_path);
 }
-
-void fix_unconstrained(model *m) {
-  walk_network(m);
-  for(int i = 0; i < m->nmasses; i++)
-    if(m->masses[i].fixed)
-      m->masses[i].pos.y = m->masses[i].prev_pos.y = 0;
-}
-
 
 /* TEST **********************/
 
@@ -297,6 +295,6 @@ void masstest() {
   model mo;
   memset(&m, 0, sizeof(model));
   make_grid(2,3,1, &mo);
-  walk_network(&mo);
+  kill_unconstrained(&mo);
 
 }

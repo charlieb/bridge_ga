@@ -45,6 +45,8 @@ typedef struct model {
 void print_model(model *m);
 void translate_model(model *m, v3 *t);
 void step_model(model *m, float dt);
+void link_masses(mass *m1, mass *m2, constraint *c);
+void link_masses_none(mass *m1, mass *m2, constraint *c);
 void link_masses_dist_eq(float dist, mass *m1, mass *m2, constraint *c);
 void make_grid(int x, int y, float spacing, model *model);
 void kill_unconstrained(model *m);

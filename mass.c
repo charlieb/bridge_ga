@@ -158,12 +158,26 @@ void step_model(model *m, float dt) {
       run_constraint(&m->constraints[j]);
 }
 
-void link_masses_dist_eq(float dist, mass *m1, mass *m2, constraint *c) {
-  c->type = DIST_EQ;
-  c->nmasses = 2;
-  c->masses = malloc(c->nmasses*sizeof(mass*));
+void link_masses(mass *m1, mass *m2, constraint *c) {
+  if(c->nmasses != 2) {
+    c->nmasses = 2;
+    if(c->masses == NULL)
+      c->masses = malloc(c->nmasses*sizeof(mass*));
+    else
+      c->masses = realloc(c->masses, c->nmasses*sizeof(mass*));
+  }
   c->masses[0] = m1;
   c->masses[1] = m2;
+}
+
+void link_masses_none(mass *m1, mass *m2, constraint *c) {
+  link_masses(m1, m2, c);
+  c->type = NONE;
+}
+
+void link_masses_dist_eq(float dist, mass *m1, mass *m2, constraint *c) {
+  link_masses(m1, m2, c);
+  c->type = DIST_EQ;
   c->val = dist;
 }
 

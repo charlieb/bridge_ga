@@ -10,8 +10,8 @@
 static const float xrange = 100;
 static const float yrange = 100;
 static const float massrange = 10;
-static const float x1 = -25;
-static const float x2 = +25;
+static const float x1 = -50;
+static const float x2 = +50;
 
 void mass_to_gene(mass *m, float *gene) {
   gene[0] = m->m;
@@ -45,7 +45,7 @@ void gene_to_constraint(int *gene, constraint *c, mass *m) {
   if(d < max_dist)
     link_masses_dist_eq(d, m+gene[0], m+gene[1], c);
   else 
-    c->type = NONE;
+    link_masses_none(m+gene[0], m+gene[1], c);
 }
 
 void model_to_gene(model *m, gene *g) {
@@ -80,9 +80,9 @@ void crossover(gene *g1, gene *g2, gene *res) {
 
 void init_gene(gene *g) {
   for(int i = 0; i < NUM_MASSES; i++) {
-    g->masses[4*i + 0] = (massrange / 2) - (rand() * massrange) / RAND_MAX;
+    g->masses[4*i + 0] = (rand() * massrange) / RAND_MAX;
     g->masses[4*i + 1] = (xrange / 2) - (rand() * xrange) / RAND_MAX;
-    g->masses[4*i + 2] = (yrange / 2) - (rand() * yrange) / RAND_MAX;
+    g->masses[4*i + 2] = - (rand() * yrange) / RAND_MAX;
     g->masses[4*i + 3] = 0;
   }
 
@@ -95,9 +95,11 @@ void init_gene(gene *g) {
 void init_model_for_gene(model *m) {
   m->nmasses = NUM_MASSES;
   m->masses = malloc(m->nmasses * sizeof(mass));
+  memset(m->masses, 0, m->nmasses * sizeof(mass));
 
   m->nconstraints = NUM_CONSTRAINTS;
   m->constraints = malloc(m->nconstraints * sizeof(constraint));
+  memset(m->constraints, 0, m->nconstraints * sizeof(constraint));
 
 }
 
@@ -186,7 +188,7 @@ void mutate(gene *g, float rate) {
   for(int i = 0; i < NUM_MASSES; i++) {
     if(rand() < RAND_MAX * rate) {
       //printf("Mutate! mass: %f -> ", g->masses[4*i + 0]);
-      g->masses[4*i + 0] = (massrange / 2) - (rand() * massrange) / RAND_MAX;
+      g->masses[4*i + 0] = (rand() * massrange) / RAND_MAX;
       //printf("%f\n", g->masses[4*i + 0]);
     }
     if(rand() < RAND_MAX * rate) {
@@ -196,7 +198,7 @@ void mutate(gene *g, float rate) {
     }
     if(rand() < RAND_MAX * rate) {
       //printf("Mutate! y: %f -> ", g->masses[4*i + 2]);
-      g->masses[4*i + 2] = (yrange / 2) - (rand() * yrange) / RAND_MAX;
+      g->masses[4*i + 2] = - (rand() * yrange) / RAND_MAX;
       //printf("%f\n", g->masses[4*i + 2]);
     }
   }
@@ -233,7 +235,7 @@ void show_gene(gene *g) {
   m.masses[0].fixed = true;
   m.masses[1].fixed = true;
 
-  draw_for_n(&m, 500);
+  draw_for_n(&m, 100);
 }
 
 void next_generation(gene *genes, int ngenes, gene *next_gen) {

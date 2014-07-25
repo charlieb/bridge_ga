@@ -318,6 +318,25 @@ void start_GA() {
   }
 }
 
+void write_genes(gene *genes, int ngenes, FILE *f)
+{
+    fprintf(f, "%i genes\n", ngenes);
+    for(int i = 0; i < ngenes; i++) {
+        fprintf(f, "%i masses\n", NUM_MASSES);
+        for(int m = 0; m < NUM_MASSES; m++)
+            fprintf(f, "%f,%f,%f,%f\n", 
+                    genes[i].masses[m*4+0],
+                    genes[i].masses[m*4+1],
+                    genes[i].masses[m*4+2],
+                    genes[i].masses[m*4+3]);
+        fprintf("f, %i constraints\n", NUM_CONSTRAINTS);
+        for(int c = 0; c < NUM_CONSTRAINTS; c++)
+            fprintf(f, "%i,%i\n", 
+                    genes[i].constraints[c*2+0],
+                    genes[i].constraints[c*2+1]);
+    }
+}
+
 void genetest() {
   gene g1, g2;
 

@@ -19,20 +19,20 @@ debug: exe
 release: CFLAGS += -O2
 release: exe
 
-release_NOX: CFLAGS += -O2 -DNOX
-release_NOX: LIBS = -lm
-release_NOX: INCLUDES =
-release_NOX: exe
+NOX: INCLUDES =
+NOX: CFLAGS += -DNOX
+NOX: LIBS = -lm
+NOX: EXE = GA_nox
+NOX: exe
 
-debug_NOX: CFLAGS += -g -DNOX
-debug_NOX: LIBS = -lm
-debug_NOX: INCLUDES =
-debug_NOX: exe
+release_NOX: CFLAGS += -O2
+release_NOX: NOX
 
-profile_NOX: CFLAGS += -pg -DNOX
-profile_NOX: LIBS = -lm
-profile_NOX: INCLUDES =
-profile_NOX: exe
+debug_NOX: CFLAGS += -g
+debug_NOX: NOX
+
+profile_NOX: CFLAGS += -pg
+profile_NOX: NOX
 
 clean:
-	@ - rm $(DEST)/$(EXE) $(OBJECTS)
+	@ - rm $(OBJECTS)

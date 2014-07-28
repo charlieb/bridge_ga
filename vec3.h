@@ -14,6 +14,7 @@ void v3div(const v3 *v, const float m, v3 *out);
 float v3mag(const v3 *v);
 void v3norm(const v3 *v, v3 *out);
 float v3dist(const v3 *v1, const v3 *v2);
+int flt_eq(float f1, float f2);
 
 void v3test();
 

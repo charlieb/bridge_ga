@@ -1,7 +1,9 @@
+#include <stdio.h>
+
 #include "mass.h"
 
-#define NUM_MASSES 50
-#define NUM_CONSTRAINTS 250
+#define NUM_MASSES 100
+#define NUM_CONSTRAINTS 200
 typedef struct gene {
   float masses[NUM_MASSES*4];
   int constraints[NUM_CONSTRAINTS*2];
@@ -17,5 +19,8 @@ void run_until_settled(model *m);
 void crossover(gene *g1, gene *g2, gene *res);
 void init_gene(gene *g);
 void init_pool(gene **genes, int ngenes);
-void start_GA();
+void get_latest_genes(gene **genes, int *ngenes);
+void write_genes(gene *genes, int ngenes, FILE *f);
+void read_genes(gene *genes, int ngenes, FILE *f);
+void start_GA(char *filename);
 void genetest();

@@ -10,8 +10,9 @@
 static const float xrange = 100;
 static const float yrange = 100;
 static const float massrange = 10;
-static const float x1 = -50;
-static const float x2 = +50;
+static const float x1 = -20;
+static const float x2 = +20;
+static const float max_constraint_dist = 25;
 
 void mass_to_gene(mass *m, float *gene) {
   gene[0] = m->m;
@@ -39,10 +40,8 @@ void constraint_to_gene(constraint *c, mass *m, int *gene) {
 }
 
 void gene_to_constraint(int *gene, constraint *c, mass *m) {
-  const float max_dist = 15;
-
   float d = v3dist(&m[gene[0]].pos, &m[gene[1]].pos);
-  if(d < max_dist)
+  if(d < max_constraint_dist)
     link_masses_dist_eq(d, m+gene[0], m+gene[1], c);
   else 
     link_masses_none(m+gene[0], m+gene[1], c);
@@ -64,6 +63,11 @@ void gene_to_model(gene *g, model *m) {
     gene_to_constraint(&g->constraints[i*2], &m->constraints[i], m->masses);
 }
 
+void genecpy(gene *to, gene *from) {
+  memcpy(to->masses, from->masses, NUM_MASSES * 4 * sizeof(float));
+  memcpy(to->constraints, from->constraints, NUM_CONSTRAINTS * 2 * sizeof(int));
+}
+
 void crossover(gene *g1, gene *g2, gene *res) {
   int mass_point = (rand() * NUM_MASSES) / RAND_MAX;
   int cons_point = (rand() * NUM_CONSTRAINTS) / RAND_MAX;
@@ -75,7 +79,7 @@ void crossover(gene *g1, gene *g2, gene *res) {
   memcpy(tmp.constraints, g1->constraints, cons_point * 2 * sizeof(float));
   memcpy(tmp.constraints + cons_point, g2->constraints, (NUM_CONSTRAINTS - cons_point) * 2 * sizeof(float));
 
-  memcpy(res, &tmp, sizeof(gene));
+  genecpy(res, &tmp);
 }
 
 void init_gene(gene *g) {
@@ -115,7 +119,7 @@ void init_gene_pool(gene **genes, int ngenes) {
 }
 
 void run_until_settled(model *m) {
-  const float max_dist = 1.000001;
+  const float max_dist = 0.001;
   bool settled = false;
   while(!settled) {
     step_model(m, 1);
@@ -150,7 +154,8 @@ float fitness(gene *g) {
   m.masses[0].fixed = true;
   m.masses[1].fixed = true;
 
-  draw_until_settled(&m);
+  //draw_until_settled(&m);
+  run_until_settled(&m);
 
   // Best Y is most negative Y
   float best_y = yrange;
@@ -240,21 +245,94 @@ void show_gene(gene *g) {
 
 void next_generation(gene *genes, int ngenes, gene *next_gen) {
   float scores[ngenes];
+  float inv_scores[ngenes];
   float total_score = 0;
+  float hi_score = -1000;
+  float lo_score = 1000;
+  int best_idx = 0, worst_idx = 0;
+  bool zero = false;
+/*
+  for(int i = 0; i < ngenes; i++)
+    printf("-");
+  printf("\n");
+  */
+
+  for(int i = 0; i < ngenes; i++) {
+    scores[i] = fitness(&genes[i]);
+    /*
+    printf(".");
+    fflush(NULL);
+    */
+  }
+  //printf("\n");
+
+  for(int i = 0; i < ngenes; i++) {
+    if(scores[i] == 0.0f) { zero = true; continue; } // no-scores don't count
+    if(scores[i] > hi_score) { hi_score = scores[i]; best_idx = i; }
+    if(scores[i] < lo_score) { lo_score = scores[i]; worst_idx = i; }
+  }
+  if(zero) lo_score -= 1;
+    
+  for(int i = 0; i < ngenes; i++) {
+    scores[i] -= lo_score;
+    total_score += scores[i];
+  }
+
+  printf("Best: %f (%f), Worst %f (%f)\n", hi_score - lo_score, hi_score, 
+                                           lo_score - lo_score, lo_score);
+  fflush(NULL);
+
+  show_gene(&genes[best_idx]);
+
+  /*
+   * not needed with the lo_score lowered above
+   *
+  // Allow no-scores to be selected with low probability
+  for(int i = 0; i < ngenes; i++)
+    if(scores[i] == 0.0f) {
+      scores[i] = 0.01;
+      total_score += scores[i];
+    }
+    */
+
+  // normalize scores and invert
+  float inv_total = 0;
+  for(int i = 0; i < ngenes; i++) {
+    scores[i] /= total_score;
+    inv_scores[i] = (1 - scores[i]) / (ngenes - 1);
+    inv_total += inv_scores[i];
+  }
+
+  int g1,g2, gto;
+
+  // Init next_gen = current gen
+  for(int i = 0; i < ngenes; i++) genecpy(next_gen, genes);
+
+  for(int i = 0; i < ngenes / 2; i++) {
+    g1 = roulette_select(scores, ngenes);
+    g2 = roulette_select(scores, ngenes);
+    gto = roulette_select(inv_scores, ngenes);
+
+    //printf("%i + %i -> %i : %f\n", g1, g2, gto, scores[gto]);
+
+    crossover(&genes[g1], &genes[g2], &next_gen[gto]);
+  }
+
+  for(int i = 0; i < ngenes; i++)
+    mutate(&next_gen[i], 0.0001);
+}
+
+void old_next_generation(gene *genes, int ngenes, gene *next_gen) {
+  float scores[ngenes];
+  float inv_scores[ngenes];
+  float total_score = 0;
+  float inv_total = 0;
   float hi_score = -1000;
   float lo_score = 1000;
   int best_idx = 0;
 
   for(int i = 0; i < ngenes; i++)
-    printf("-");
-  printf("\n");
-
-  for(int i = 0; i < ngenes; i++) {
     scores[i] = fitness(&genes[i]);
-    printf(".");
-    fflush(NULL);
-  }
-  printf("\n");
 
   for(int i = 0; i < ngenes; i++) {
     if(scores[i] == 0.0f) continue; // no-scores don't count
@@ -282,59 +360,101 @@ void next_generation(gene *genes, int ngenes, gene *next_gen) {
     }
 
   // normalize scores
-  for(int i = 0; i < ngenes; i++)
+  for(int i = 0; i < ngenes; i++) {
     scores[i] /= total_score;
+    inv_scores[i] = (1 - scores[i]) / (ngenes - 1);
+    inv_total += inv_scores[i];
+  }
 
-  int g1,g2;
 
+  for(int i = 0; i < ngenes; i++) genecpy(next_gen, genes);
+
+  int g1,g2, gto;
   for(int i = 0; i < ngenes / 2; i++) {
     g1 = roulette_select(scores, ngenes);
     g2 = roulette_select(scores, ngenes);
-    crossover(&genes[g1], &genes[g2], 
-              &next_gen[((long int)rand() * (long int)ngenes) / RAND_MAX]);
+    gto = roulette_select(inv_scores, ngenes);
+    crossover(&genes[g1], &genes[g2], &next_gen[gto]);
+              //&next_gen[((long int)rand() * (long int)ngenes) / RAND_MAX]);
   }
 
   for(int i = 0; i < ngenes; i++)
-    mutate(&genes[i], 0.01);
+    mutate(&next_gen[i], 0.01);
 }
 
-void start_GA() {
-  int ngenes = 200;
+static gene *latest_genes = NULL;
+static int latest_ngenes = 0;
+void get_latest_genes(gene **genes, int *ngenes) { *genes = latest_genes; *ngenes = latest_ngenes; }
+
+void start_GA(char *filename) {
+  // Note: ngenes is fixed even if a file is read.
+  const int ngenes = 200;
+  latest_ngenes = ngenes;
+
   gene *pool1, *pool2;
   gene *this_gen, *next_gen, *swap;
 
   init_gene_pool(&pool1, ngenes);
   init_gene_pool(&pool2, ngenes);
+
+  if(filename) {
+    printf("Loading from %s\n", filename);
+    FILE *f = fopen(filename, "r");
+    read_genes(pool1, ngenes, f);
+    fclose(f);
+  }
   
   this_gen = pool1;
   next_gen = pool2;
 
   while(true) {
-    printf("Generation\n"); fflush(NULL);
-    next_generation(this_gen, ngenes, next_gen);
+    //printf("Generation\n"); fflush(NULL);
+    old_next_generation(this_gen, ngenes, next_gen);
     swap = this_gen;
     this_gen = next_gen;
     next_gen = swap;
+
+    latest_genes = this_gen;
   }
 }
 
 void write_genes(gene *genes, int ngenes, FILE *f)
 {
-    fprintf(f, "%i genes\n", ngenes);
-    for(int i = 0; i < ngenes; i++) {
-        fprintf(f, "%i masses\n", NUM_MASSES);
-        for(int m = 0; m < NUM_MASSES; m++)
-            fprintf(f, "%f,%f,%f,%f\n", 
-                    genes[i].masses[m*4+0],
-                    genes[i].masses[m*4+1],
-                    genes[i].masses[m*4+2],
-                    genes[i].masses[m*4+3]);
-        fprintf("f, %i constraints\n", NUM_CONSTRAINTS);
-        for(int c = 0; c < NUM_CONSTRAINTS; c++)
-            fprintf(f, "%i,%i\n", 
-                    genes[i].constraints[c*2+0],
-                    genes[i].constraints[c*2+1]);
-    }
+  fprintf(f, "%i genes\n", ngenes);
+  for(int i = 0; i < ngenes; i++) {
+    fprintf(f, "%i masses\n", NUM_MASSES);
+    for(int m = 0; m < NUM_MASSES; m++)
+      fprintf(f, "%f,%f,%f,%f\n", 
+          genes[i].masses[m*4+0],
+          genes[i].masses[m*4+1],
+          genes[i].masses[m*4+2],
+          genes[i].masses[m*4+3]);
+    fprintf(f, "%i constraints\n", NUM_CONSTRAINTS);
+    for(int c = 0; c < NUM_CONSTRAINTS; c++)
+      fprintf(f, "%i,%i\n", 
+          genes[i].constraints[c*2+0],
+          genes[i].constraints[c*2+1]);
+  }
+}
+
+void read_genes(gene *genes, int ngenes, FILE *f)
+{
+  int nms, ncns;
+  fscanf(f, "%i genes\n", &ngenes);
+  for(int i = 0; i < ngenes; i++) {
+    fscanf(f, "%i masses\n", &nms);
+    for(int m = 0; m < NUM_MASSES; m++)
+      fscanf(f, "%f,%f,%f,%f\n", 
+          &genes[i].masses[m*4+0],
+          &genes[i].masses[m*4+1],
+          &genes[i].masses[m*4+2],
+          &genes[i].masses[m*4+3]);
+    fscanf(f, "%i constraints\n", &ncns);
+    for(int c = 0; c < NUM_CONSTRAINTS; c++)
+      fscanf(f, "%i,%i\n", 
+          &genes[i].constraints[c*2+0],
+          &genes[i].constraints[c*2+1]);
+  }
 }
 
 void genetest() {
@@ -350,7 +470,8 @@ void genetest() {
   gene_to_model(&g1, &m);
   memset(&g1, 0, sizeof(gene));
   model_to_gene(&m, &g1);
-  if(memcmp(&g1, &g2, sizeof(gene)))
+  if(memcmp(g1.masses, g2.masses, NUM_MASSES * 4 * sizeof(float)) &&
+      memcmp(g1.constraints, g2.constraints, NUM_CONSTRAINTS * 2 * sizeof(int)))
     printf("FAIL gene_to_model\n");
   else
     printf("PASS gene_to_model\n");
@@ -366,4 +487,23 @@ void genetest() {
     printf("%i, ", res[i]);
   printf("\n");
  
+  char *fn = tmpnam(NULL);
+  printf("Filename: %s\n", fn);
+  FILE *f = fopen(fn, "w+");
+  
+  memcpy(&g2, &g1, sizeof(gene));
+
+  write_genes(&g1, 1, f);
+  fseek(f, 0, SEEK_SET);
+  read_genes(&g1, 1, f);
+
+  if(memcmp(g1.masses, g2.masses, NUM_MASSES * 4 * sizeof(float)) &&
+      memcmp(g1.constraints, g2.constraints, NUM_CONSTRAINTS * 2 * sizeof(int)))
+    printf("FAIL read/write genes\n");
+  else
+    printf("PASS read/write genes\n");
+
+  fclose(f);
+  remove(fn);
+
 }

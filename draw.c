@@ -94,13 +94,11 @@ void draw_for_n(model *m, int n) {
 void draw_until_settled(model *m) {
   const float max_dist = 0.001;
   bool settled = false;
-  int its = 0;
-  const int max_its = 100;
 
   v3 center = { SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 0 };
   translate_model(m, &center);
 
-  while(!settled && its < max_its) {
+  while(!settled) {
     step_model(m, 1);
 
     //Render the scene
@@ -115,7 +113,6 @@ void draw_until_settled(model *m) {
         settled = false;
         break;
       }
-    its++;
   }
   
   center.x = -center.x;

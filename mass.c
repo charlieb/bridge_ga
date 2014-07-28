@@ -237,7 +237,7 @@ void kill_unconstrained(model *m) {
   while(path_end >= 0) {
     for(int c = 0; c < m->nconstraints; c++) {
       constraint *cons = &m->constraints[c];
-      if(cons->nmasses != 2 || cons->type != DIST_EQ) break;
+      if(cons->nmasses != 2 || cons->type != DIST_EQ) continue;
 
       if(cons->masses[0] == path[path_end]) {
         if(cons->masses[1]->dead) {
@@ -267,8 +267,8 @@ void kill_unconstrained(model *m) {
 /* TEST **********************/
 
 void masstest() {
-  mass m1, m2;
-  constraint c;
+  mass m1 = {0,}, m2 = {0,};
+  constraint c = {0,};
   v3 diff;
 
   c.type = DIST_EQ;
@@ -296,19 +296,21 @@ void masstest() {
   model m;
   memset(&m, 0, sizeof(model));
   make_grid(10,5,1,&m);
+  bool grid_pass = true;
   for(int i = 0; i < m.nconstraints; i++) {
     v3sub(&m.constraints[i].masses[0]->pos, 
           &m.constraints[i].masses[1]->pos,
           &diff);
-    if(flt_eq(m.constraints[i].val, v3mag(&diff)))
-      printf("PASS grid check\n");
-    else
-      printf("FAIL grid check: dist = %f, expected %f\n", v3mag(&diff), m.constraints[i].val);
+    if(!flt_eq(m.constraints[i].val, v3mag(&diff))) grid_pass = false;
   }
+  if(grid_pass)
+    printf("PASS grid check");
+  else
+    printf("FAIL grid check");
 
   model mo;
   memset(&m, 0, sizeof(model));
-  make_grid(2,3,1, &mo);
+  make_grid(3,3,1, &mo);
   kill_unconstrained(&mo);
 
 }

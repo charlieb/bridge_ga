@@ -138,6 +138,14 @@ void print_model(model *m) {
     print_constraint(&m->constraints[i]);
 }
 
+void perturb_model(model *m) {
+  for(int i = 0; i < m->nmasses; i++) {
+    m->masses[i].pos.x += 0.1 * (float) rand() / (float)RAND_MAX;
+    m->masses[i].pos.y += 0.1 * (float) rand() / (float)RAND_MAX;
+    m->masses[i].pos.z += 0.1 * (float) rand() / (float)RAND_MAX;
+  }
+}
+
 void translate_model(model *m, v3 *t) {
   for(int i = 0; i < m->nmasses; i++) {
     v3add(&m->masses[i].pos, t, &m->masses[i].pos);

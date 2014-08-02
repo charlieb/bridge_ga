@@ -44,6 +44,7 @@ typedef struct model {
 
 void print_model(model *m);
 void translate_model(model *m, v3 *t);
+void perturb_model(model *m);
 void step_model(model *m, float dt);
 void link_masses(mass *m1, mass *m2, constraint *c);
 void link_masses_none(mass *m1, mass *m2, constraint *c);

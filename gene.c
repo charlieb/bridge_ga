@@ -121,6 +121,8 @@ void init_gene_pool(gene **genes, int ngenes) {
 void run_until_settled(model *m) {
   const float max_dist = 0.001;
   bool settled = false;
+  const int max_its = 200;
+  int its = max_its;
   while(!settled) {
     step_model(m, 1);
     settled = true;
@@ -129,6 +131,10 @@ void run_until_settled(model *m) {
         settled = false;
         break;
       }
+    if(its-- <= 0) {
+      perturb_model(m);
+      its = max_its;
+    }
   }
 }
 
